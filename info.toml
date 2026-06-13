@@ -1,0 +1,31 @@
+# OSlings exercise registry.
+#
+# `oslings` reads this file to know the ordered list of exercises, how each
+# one is tested, and which kernel source files belong to it. The kernel `rv6`
+# is built *cumulatively*: completing an exercise leaves its files in place,
+# and the next exercise builds on top of them.
+
+[meta]
+# Marker the kernel prints on the serial console when an exercise's runtime
+# check succeeds. The QEMU harness greps for this exact line.
+pass_marker = "OSLINGS:PASS"
+# Marker printed by the panic handler / failed checks.
+fail_marker = "OSLINGS:FAIL"
+
+# --- 00 ---------------------------------------------------------------------
+[[exercises]]
+name = "00_rust_kernel_basics"
+path = "exercises/00_rust_kernel_basics"
+# "build": the exercise passes when `rv6` compiles for the bare-metal target.
+# "qemu":  the exercise passes when the booted kernel prints the pass marker.
+mode = "build"
+# Files (relative to rv6/src) that this exercise introduces or rewrites.
+# Used by `oslings reset` and the initial scaffold.
+files = ["main.rs"]
+
+# --- 01 ---------------------------------------------------------------------
+[[exercises]]
+name = "01_boot"
+path = "exercises/01_boot"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs"]

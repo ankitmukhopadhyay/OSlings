@@ -1,0 +1,18 @@
+[package]
+name = "oslings-cli"
+version = "0.1.0"
+edition = "2021"
+description = "OSlings — a Rustlings-style CLI for learning OS concepts by building the rv6 kernel."
+
+[[bin]]
+name = "oslings"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+termimad = "0.30"
+notify = "6"
+notify-debouncer-mini = "0.4"

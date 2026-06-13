@@ -1,0 +1,6 @@
+# The CLI (oslings-cli) builds with whatever stable toolchain you have.
+# The kernel (rv6) pins nightly via rv6/rust-toolchain.toml, because bare-metal
+# RISC-V needs the nightly-installed `riscv64gc-unknown-none-elf` std and a few
+# unstable build conveniences. This root file is intentionally minimal.
+[toolchain]
+channel = "stable"

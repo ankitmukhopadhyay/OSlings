@@ -1,0 +1,18 @@
+[package]
+name = "rv6"
+version = "0.1.0"
+edition = "2021"
+description = "A pedagogical RISC-V kernel built exercise-by-exercise by OSlings."
+
+[[bin]]
+name = "rv6"
+path = "src/main.rs"
+
+# A bare-metal kernel must not unwind; abort on panic in both profiles.
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+[dependencies]

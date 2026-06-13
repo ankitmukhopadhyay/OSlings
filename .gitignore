@@ -1,0 +1,8 @@
+/target
+**/target
+.oslings/state.toml
+*.o
+*.elf
+*.img
+Cargo.lock
+!/oslings-cli/Cargo.lock

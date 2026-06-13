@@ -1,0 +1,22 @@
+# Building inside rv6/ always targets bare-metal RISC-V, so a plain
+# `cargo build` "just works" without typing --target every time.
+[build]
+target = "riscv64gc-unknown-none-elf"
+
+[target.riscv64gc-unknown-none-elf]
+# Use our kernel linker script (placed at the kernel's load address) and abort
+# instead of emitting unwinding machinery we have no runtime for.
+rustflags = ["-Clink-arg=-Tkernel.ld"]
+
+# `cargo run` boots the kernel in QEMU the same way the OSlings test harness
+# does. -bios none means *we* are the firmware, loaded at 0x80000000.
+runner = """
+qemu-system-riscv64 \
+  -machine virt \
+  -bios none \
+  -m 128M \
+  -smp 1 \
+  -nographic \
+  -serial mon:stdio \
+  -kernel \
+"""
