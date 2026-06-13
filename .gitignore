@@ -4,5 +4,6 @@
 *.o
 *.elf
 *.img
+sync-to-repo.sh
 Cargo.lock
 !/oslings-cli/Cargo.lock
