@@ -27,22 +27,53 @@ itself builds on stable.
 # build the CLI once
 cargo build --manifest-path oslings-cli/Cargo.toml
 
-# from the project root, drive your learning loop:
-oslings progress          # where am I?
-oslings lesson            # read the current exercise's lesson
-oslings watch             # edit rv6/src and save — tests re-run automatically
+# from the project root, just run it:
+oslings
 ```
 
 (Put `oslings-cli/target/debug/` on your PATH, or alias
 `oslings=./oslings-cli/target/debug/oslings`.)
 
-## Commands
+## The interactive app
+
+Running `oslings` with no arguments launches a full-screen, Rustlings-style
+terminal app. It opens on the **current exercise's lesson**; everything else is
+one keypress away, and a progress bar stays pinned to the bottom.
+
+It's page-based:
+
+```
+ Lesson  ──n──▶  Watch        (auto-runs the test; re-runs on every file save)
+   ▲   ◀──p────────┘
+   │
+   ├── l ──▶  List            (jump to any exercise you've already reached)
+   └── h ──▶  Hints           (reveal one more each press)
+```
+
+| Key | Where | Action |
+|---|---|---|
+| `n` | Lesson | Begin: run the test and watch for saves |
+| `n` | Watch (passed) | Advance to the next exercise's lesson |
+| `p` | Watch / overlays | Back to the previous page (the lesson) |
+| `l` | anywhere | Open the exercise list (↑↓ move, ⏎ open, `p` back) |
+| `h` | Lesson / Watch | Show hints; press again for the next one |
+| `r` | Watch | Reset the exercise's starter code and re-run |
+| `↑`/`↓` `j`/`k`, PgUp/PgDn | content pages | Scroll |
+| `q` / Ctrl-C | anywhere | Quit |
+
+While on the Watch page, **edit `rv6/src/…` in your editor and save** — the test
+re-runs automatically. On success, press `n` to move on.
+
+## Scriptable subcommands
+
+The same actions are available non-interactively (handy for scripting or if you
+prefer a plain shell loop):
 
 | Command | What it does |
 |---|---|
-| `oslings watch` | Re-run the current exercise on every save; advance on pass. |
 | `oslings run [exercise]` | Run one exercise's test once (defaults to current). |
-| `oslings hint [exercise]` | Reveal the next progressive hint (3 levels). `--all`, `--reset`. |
+| `oslings watch` | Headless: re-run the current exercise on every save. |
+| `oslings hint [exercise]` | Reveal the next progressive hint. `--all`, `--reset`. |
 | `oslings progress` | Show completed / remaining with a progress bar. |
 | `oslings list` | List every exercise and its test mode. |
 | `oslings lesson [exercise]` | Render an exercise's README in the terminal. |

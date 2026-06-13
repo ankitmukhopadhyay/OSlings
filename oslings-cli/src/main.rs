@@ -4,6 +4,7 @@
 mod model;
 mod render;
 mod runner;
+mod tui;
 mod watch;
 
 use anyhow::{anyhow, Context, Result};
@@ -19,7 +20,7 @@ use std::fs;
 )]
 struct Cli {
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Subcommand)]
@@ -66,7 +67,12 @@ fn real_main() -> Result<()> {
     let cli = Cli::parse();
     let project = Project::discover()?;
 
-    match cli.command {
+    // No subcommand → launch the interactive TUI (the default experience).
+    let Some(command) = cli.command else {
+        return tui::run(&project);
+    };
+
+    match command {
         Command::Watch => watch::watch(&project),
         Command::Run { exercise } => cmd_run(&project, exercise),
         Command::Hint { exercise, all, reset } => cmd_hint(&project, exercise, all, reset),
@@ -146,7 +152,7 @@ fn cmd_hint(project: &Project, arg: Option<String>, all: bool, reset: bool) -> R
     let mut state = State::load(project)?;
     let ex = resolve(project, &state, &arg)?.clone();
 
-    let hints = parse_hints(project, &ex)?;
+    let hints = model::parse_hints(project, &ex);
     if hints.is_empty() {
         render::note("No hints for this exercise.");
         return Ok(());
@@ -281,29 +287,3 @@ fn cmd_goto(project: &Project, arg: Option<String>) -> Result<()> {
     Ok(())
 }
 
-/// Split an exercise's hints.md into its three "## Hint N" sections.
-fn parse_hints(project: &Project, ex: &Exercise) -> Result<Vec<String>> {
-    let path = project.root.join(&ex.path).join("hints.md");
-    let raw = match fs::read_to_string(&path) {
-        Ok(s) => s,
-        Err(_) => return Ok(vec![]),
-    };
-
-    let mut hints = Vec::new();
-    let mut current: Option<String> = None;
-    for line in raw.lines() {
-        if line.trim_start().to_lowercase().starts_with("## hint") {
-            if let Some(prev) = current.take() {
-                hints.push(prev.trim().to_string());
-            }
-            current = Some(String::new());
-        } else if let Some(buf) = current.as_mut() {
-            buf.push_str(line);
-            buf.push('\n');
-        }
-    }
-    if let Some(prev) = current.take() {
-        hints.push(prev.trim().to_string());
-    }
-    Ok(hints)
-}

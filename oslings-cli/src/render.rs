@@ -15,7 +15,7 @@ const CYAN: &str = "\x1b[36m";
 const DIM: &str = "\x1b[2m";
 
 /// A skin tuned for reading code-heavy lessons in a terminal.
-fn skin() -> MadSkin {
+pub fn skin() -> MadSkin {
     let mut skin = MadSkin::default();
     skin.set_headers_fg(Color::AnsiValue(45)); // cyan-ish headers
     skin.bold.set_fg(Color::Yellow);

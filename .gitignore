@@ -4,6 +4,8 @@
 *.o
 *.elf
 *.img
-sync-to-repo.sh
 Cargo.lock
 !/oslings-cli/Cargo.lock
+
+# Local-only helper that pushes this working dir into the publishable repo.
+sync-to-repo.sh

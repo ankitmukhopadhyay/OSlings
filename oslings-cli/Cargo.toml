@@ -14,5 +14,6 @@ anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 termimad = "0.30"
+crossterm = "0.29"
 notify = "6"
 notify-debouncer-mini = "0.4"
