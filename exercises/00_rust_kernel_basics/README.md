@@ -20,8 +20,8 @@ very first thing we do is tell the compiler: *don't assume any of that exists.*
 This inner attribute removes the standard library. We keep only
 [`core`](https://doc.rust-lang.org/core/) — the dependency-free heart of Rust:
 types like `Option`, `Result`, slices, iterators, and `PanicInfo`, none of
-which need an OS. (Later, once we write our own allocator in exercise 02, we
-will opt back into `alloc` for `Box`, `Vec`, etc.)
+which need an OS. (Later, once we've written our own memory allocators, we will
+opt back into `alloc` for `Box`, `Vec`, etc.)
 
 ### `#![no_main]`
 

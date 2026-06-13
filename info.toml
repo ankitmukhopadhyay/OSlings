@@ -29,3 +29,10 @@ name = "01_boot"
 path = "exercises/01_boot"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs"]
+
+# --- 02 ---------------------------------------------------------------------
+[[exercises]]
+name = "02_physical_memory"
+path = "exercises/02_physical_memory"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs"]
