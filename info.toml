@@ -36,3 +36,10 @@ name = "02_physical_memory"
 path = "exercises/02_physical_memory"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs"]
+
+# --- 03 ---------------------------------------------------------------------
+[[exercises]]
+name = "03_paging"
+path = "exercises/03_paging"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs"]
