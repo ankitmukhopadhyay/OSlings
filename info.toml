@@ -43,3 +43,10 @@ name = "03_paging"
 path = "exercises/03_paging"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs"]
+
+# --- 04 ---------------------------------------------------------------------
+[[exercises]]
+name = "04_processes"
+path = "exercises/04_processes"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs"]
