@@ -50,3 +50,10 @@ name = "04_processes"
 path = "exercises/04_processes"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs"]
+
+# --- 05 ---------------------------------------------------------------------
+[[exercises]]
+name = "05_context_switch"
+path = "exercises/05_context_switch"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs"]
