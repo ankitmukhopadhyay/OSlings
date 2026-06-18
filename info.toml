@@ -57,3 +57,10 @@ name = "05_context_switch"
 path = "exercises/05_context_switch"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs"]
+
+# --- 06 ---------------------------------------------------------------------
+[[exercises]]
+name = "06_scheduling"
+path = "exercises/06_scheduling"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs"]
