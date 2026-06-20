@@ -64,3 +64,10 @@ name = "06_scheduling"
 path = "exercises/06_scheduling"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs"]
+
+# --- 07 ---------------------------------------------------------------------
+[[exercises]]
+name = "07_spinlocks"
+path = "exercises/07_spinlocks"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs"]
