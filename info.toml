@@ -71,3 +71,10 @@ name = "07_spinlocks"
 path = "exercises/07_spinlocks"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs"]
+
+# --- 08 ---------------------------------------------------------------------
+[[exercises]]
+name = "08_semaphores"
+path = "exercises/08_semaphores"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "kheap.rs", "semaphore.rs"]
