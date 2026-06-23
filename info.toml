@@ -78,3 +78,10 @@ name = "08_semaphores"
 path = "exercises/08_semaphores"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "kheap.rs", "semaphore.rs"]
+
+# --- 09 ---------------------------------------------------------------------
+[[exercises]]
+name = "09_virtual_memory"
+path = "exercises/09_virtual_memory"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "kheap.rs", "semaphore.rs"]
