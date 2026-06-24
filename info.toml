@@ -85,3 +85,10 @@ name = "09_virtual_memory"
 path = "exercises/09_virtual_memory"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "kheap.rs", "semaphore.rs"]
+
+# --- 10 ---------------------------------------------------------------------
+[[exercises]]
+name = "10_filesystem"
+path = "exercises/10_filesystem"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "kheap.rs", "semaphore.rs", "fs.rs"]
