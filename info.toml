@@ -92,3 +92,10 @@ name = "10_filesystem"
 path = "exercises/10_filesystem"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "kheap.rs", "semaphore.rs", "fs.rs"]
+
+# --- 11 ---------------------------------------------------------------------
+[[exercises]]
+name = "11_devices"
+path = "exercises/11_devices"
+mode = "qemu"
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "kheap.rs", "semaphore.rs", "fs.rs"]
