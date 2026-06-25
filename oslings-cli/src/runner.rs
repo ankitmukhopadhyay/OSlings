@@ -24,14 +24,14 @@ pub struct Outcome {
 
 pub fn run(project: &Project, ex: &Exercise) -> Result<Outcome> {
     match ex.mode {
-        Mode::Build => run_build(project),
-        Mode::Qemu => run_qemu(project),
+        Mode::Build => run_build(project, ex),
+        Mode::Qemu => run_qemu(project, ex),
     }
 }
 
 /// Compile rv6 for the bare-metal target. Success = it builds.
-fn run_build(project: &Project) -> Result<Outcome> {
-    let output = cargo_build(project)?;
+fn run_build(project: &Project, ex: &Exercise) -> Result<Outcome> {
+    let output = cargo_build(project, ex)?;
     let detail = combine(&output.stdout, &output.stderr);
     if output.status.success() {
         Ok(Outcome {
@@ -49,8 +49,8 @@ fn run_build(project: &Project) -> Result<Outcome> {
 }
 
 /// Compile, then boot in QEMU and look for the pass marker on the serial line.
-fn run_qemu(project: &Project) -> Result<Outcome> {
-    let build = cargo_build(project)?;
+fn run_qemu(project: &Project, ex: &Exercise) -> Result<Outcome> {
+    let build = cargo_build(project, ex)?;
     if !build.status.success() {
         return Ok(Outcome {
             passed: false,
@@ -108,11 +108,15 @@ fn run_qemu(project: &Project) -> Result<Outcome> {
     }
 }
 
-fn cargo_build(project: &Project) -> Result<std::process::Output> {
-    Command::new("cargo")
-        .arg("build")
-        .current_dir(project.rv6_dir())
-        .output()
+fn cargo_build(project: &Project, ex: &Exercise) -> Result<std::process::Output> {
+    let mut cmd = Command::new("cargo");
+    cmd.arg("build").current_dir(project.rv6_dir());
+    // Part 2 exercises build with `--features harness` so the kernel runs its
+    // boot self-check (OSLINGS:PASS) instead of dropping into the interactive OS.
+    if !ex.features.is_empty() {
+        cmd.arg("--features").arg(ex.features.join(","));
+    }
+    cmd.output()
         .context("failed to run `cargo build` — is cargo on your PATH?")
 }
 

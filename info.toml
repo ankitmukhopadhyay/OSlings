@@ -99,3 +99,16 @@ name = "11_devices"
 path = "exercises/11_devices"
 mode = "qemu"
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "kheap.rs", "semaphore.rs", "fs.rs"]
+
+# ===========================================================================
+#  PART 2 — Boot it & build a shell  (the OS becomes bootable & runnable)
+# ===========================================================================
+
+# --- 12 ---------------------------------------------------------------------
+[[exercises]]
+name = "12_boot_to_life"
+path = "exercises/12_boot_to_life"
+mode = "qemu"
+part = 2
+features = ["harness"]
+files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "semaphore.rs", "kheap.rs", "fs.rs"]

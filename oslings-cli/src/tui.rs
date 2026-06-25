@@ -699,13 +699,30 @@ impl App<'_> {
     }
 
     fn render_list(&self, out: &mut Stdout, w: u16, h: u16) -> Result<()> {
-        let top = 2u16;
+        let mut row = 2u16;
         let max_row = h.saturating_sub(4);
         let furthest = self.furthest();
+        let mut last_part = 0usize;
         for (i, ex) in self.project.info.exercises.iter().enumerate() {
-            let row = top + i as u16;
             if row > max_row {
                 break;
+            }
+            // Divider when the curriculum part changes (Part 1 / Part 2 / …).
+            if ex.part != last_part {
+                last_part = ex.part;
+                queue!(
+                    out,
+                    MoveTo(0, row),
+                    SetForegroundColor(Color::AnsiValue(244)),
+                    SetAttribute(Attribute::Bold),
+                    Print(fit(&format!("  ── {} ──", model::part_label(ex.part)), w)),
+                    SetAttribute(Attribute::Reset),
+                    ResetColor,
+                )?;
+                row += 1;
+                if row > max_row {
+                    break;
+                }
             }
             let locked = i > furthest;
             let mark = if self.state.is_completed(&ex.name) {
@@ -736,6 +753,7 @@ impl App<'_> {
                 ResetColor,
                 SetAttribute(Attribute::Reset),
             )?;
+            row += 1;
         }
         Ok(())
     }

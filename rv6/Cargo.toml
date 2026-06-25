@@ -15,4 +15,10 @@ panic = "abort"
 [profile.release]
 panic = "abort"
 
+[features]
+# When enabled (by `oslings`), the kernel runs an automated boot self-check and
+# prints OSLINGS:PASS, then powers off — for grading. Without it (plain
+# `cargo build` / `cargo run`), the kernel boots the real interactive OS.
+harness = []
+
 [dependencies]

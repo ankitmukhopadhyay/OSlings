@@ -200,7 +200,12 @@ fn cmd_hint(project: &Project, arg: Option<String>, all: bool, reset: bool) -> R
 fn cmd_list(project: &Project) -> Result<()> {
     let state = State::load(project)?;
     println!();
+    let mut last_part = 0usize;
     for (i, ex) in project.info.exercises.iter().enumerate() {
+        if ex.part != last_part {
+            last_part = ex.part;
+            println!("\n  ── {} ──", model::part_label(ex.part));
+        }
         let mark = if state.is_completed(&ex.name) { "✓" } else { " " };
         let mode = match ex.mode {
             model::Mode::Build => "build",

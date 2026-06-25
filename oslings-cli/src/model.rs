@@ -25,6 +25,28 @@ pub struct Exercise {
     pub mode: Mode,
     #[serde(default)]
     pub files: Vec<String>,
+    /// Which curriculum part this belongs to (1 = build the kernel, 2 = boot &
+    /// shell, 3 = persistence). Defaults to 1 for the original exercises.
+    #[serde(default = "default_part")]
+    pub part: usize,
+    /// Extra cargo features to build the kernel with for this exercise (e.g.
+    /// `["harness"]` so the test self-checks and prints OSLINGS:PASS).
+    #[serde(default)]
+    pub features: Vec<String>,
+}
+
+fn default_part() -> usize {
+    1
+}
+
+/// Human-readable banner for a curriculum part (used as a list divider).
+pub fn part_label(part: usize) -> &'static str {
+    match part {
+        1 => "Part 1 · Build the kernel  (→ an OS is built)",
+        2 => "Part 2 · Boot it & build a shell  (→ bootable & runnable)",
+        3 => "Part 3 · Persistence",
+        _ => "More exercises",
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
