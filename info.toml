@@ -112,3 +112,12 @@ mode = "qemu"
 part = 2
 features = ["harness"]
 files = ["main.rs", "entry.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "semaphore.rs", "kheap.rs", "fs.rs"]
+
+# --- 13 ---------------------------------------------------------------------
+[[exercises]]
+name = "13_traps"
+path = "exercises/13_traps"
+mode = "qemu"
+part = 2
+features = ["harness"]
+files = ["main.rs", "entry.rs", "start.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "semaphore.rs", "kheap.rs", "fs.rs", "trap.rs"]
