@@ -1,0 +1,135 @@
+//! vm.rs — RISC-V Sv39 virtual memory. (Exercise 09 reference solution.)
+
+use crate::kalloc;
+use crate::memlayout::{KERNBASE, PGSIZE, PHYSTOP, PLIC, PLIC_SIZE, TEST_FINISHER, UART0};
+use core::arch::asm;
+use core::ptr;
+
+pub const PTE_V: usize = 1 << 0;
+pub const PTE_R: usize = 1 << 1;
+pub const PTE_W: usize = 1 << 2;
+pub const PTE_X: usize = 1 << 3;
+#[allow(dead_code)]
+pub const PTE_U: usize = 1 << 4;
+
+#[repr(transparent)]
+#[derive(Clone, Copy)]
+pub struct Pte(pub usize);
+
+impl Pte {
+    pub const fn new(pa: usize, flags: usize) -> Pte {
+        Pte(((pa >> 12) << 10) | flags)
+    }
+    pub const fn pa(self) -> usize {
+        (self.0 >> 10) << 12
+    }
+    pub const fn flags(self) -> usize {
+        self.0 & 0x3ff
+    }
+    pub const fn is_valid(self) -> bool {
+        self.0 & PTE_V != 0
+    }
+}
+
+const fn px(level: usize, va: usize) -> usize {
+    (va >> (12 + level * 9)) & 0x1ff
+}
+
+fn pgrounddown(a: usize) -> usize {
+    a & !(PGSIZE - 1)
+}
+
+pub unsafe fn walk(mut table: *mut Pte, va: usize, alloc: bool) -> *mut Pte {
+    let mut level = 2;
+    while level > 0 {
+        let pte = table.add(px(level, va));
+        if (*pte).is_valid() {
+            table = (*pte).pa() as *mut Pte;
+        } else {
+            if !alloc {
+                return ptr::null_mut();
+            }
+            let page = kalloc::kalloc();
+            if page.is_null() {
+                return ptr::null_mut();
+            }
+            ptr::write_bytes(page, 0, PGSIZE);
+            *pte = Pte::new(page as usize, PTE_V);
+            table = page as *mut Pte;
+        }
+        level -= 1;
+    }
+    table.add(px(0, va))
+}
+
+pub unsafe fn mappages(
+    table: *mut Pte,
+    va: usize,
+    size: usize,
+    pa: usize,
+    perm: usize,
+) -> Result<(), ()> {
+    let mut a = pgrounddown(va);
+    let last = pgrounddown(va + size - 1);
+    let mut pa = pa;
+    loop {
+        let pte = walk(table, a, true);
+        if pte.is_null() {
+            return Err(());
+        }
+        *pte = Pte::new(pa, perm | PTE_V);
+        if a == last {
+            break;
+        }
+        a += PGSIZE;
+        pa += PGSIZE;
+    }
+    Ok(())
+}
+
+// ========================================================================
+//  Kernel virtual memory.
+// ========================================================================
+
+pub const SATP_SV39: usize = 8 << 60;
+
+pub fn make_satp(root: *mut Pte) -> usize {
+    SATP_SV39 | ((root as usize) >> 12)
+}
+
+pub unsafe fn kvmmake() -> *mut Pte {
+    let root = kalloc::kalloc() as *mut Pte;
+    if root.is_null() {
+        return ptr::null_mut();
+    }
+    ptr::write_bytes(root as *mut u8, 0, PGSIZE);
+
+    if mappages(root, UART0, PGSIZE, UART0, PTE_R | PTE_W).is_err() {
+        return ptr::null_mut();
+    }
+    if mappages(root, TEST_FINISHER, PGSIZE, TEST_FINISHER, PTE_R | PTE_W).is_err() {
+        return ptr::null_mut();
+    }
+    if mappages(root, PLIC, PLIC_SIZE, PLIC, PTE_R | PTE_W).is_err() {
+        return ptr::null_mut();
+    }
+    if mappages(
+        root,
+        KERNBASE,
+        PHYSTOP - KERNBASE,
+        KERNBASE,
+        PTE_R | PTE_W | PTE_X,
+    )
+    .is_err()
+    {
+        return ptr::null_mut();
+    }
+
+    root
+}
+
+pub unsafe fn kvminithart(root: *mut Pte) {
+    let satp = make_satp(root);
+    asm!("csrw satp, {}", in(reg) satp);
+    asm!("sfence.vma zero, zero");
+}
