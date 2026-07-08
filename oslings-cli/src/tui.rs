@@ -41,6 +41,7 @@ const SPINNER: [&str; 4] = ["|", "/", "-", "\\"];
 enum View {
     Menu,
     About,
+    Cheatsheet,
     Lesson,
     Watch,
     List,
@@ -48,11 +49,12 @@ enum View {
 }
 
 /// The menu items on the home screen, in display order.
-const MENU_LEN: usize = 4;
+const MENU_LEN: usize = 5;
 const MENU_CONTINUE: usize = 0;
 const MENU_LIST: usize = 1;
-const MENU_ABOUT: usize = 2;
-const MENU_QUIT: usize = 3;
+const MENU_CHEATSHEET: usize = 2;
+const MENU_ABOUT: usize = 3;
+const MENU_QUIT: usize = 4;
 
 /// Restores the terminal to a sane state on drop, even if we panic.
 struct TermGuard;
@@ -237,6 +239,7 @@ impl App<'_> {
             View::Hint => self.hint_md(),
             View::Watch => self.watch_md(),
             View::About => about_md(),
+            View::Cheatsheet => crate::cheatsheet::markdown().to_string(),
             View::Menu | View::List => unreachable!(),
         };
         let (w, h) = term_size();
@@ -337,6 +340,17 @@ impl App<'_> {
         self.rebuild_content();
     }
 
+    fn open_cheatsheet(&mut self) {
+        // An overlay like Hint/List: remember where we came from so `p`/Esc
+        // returns there (the menu, a lesson, or the watch page).
+        self.prev_view = match self.view {
+            View::Cheatsheet | View::Hint | View::List => self.prev_view,
+            other => other,
+        };
+        self.view = View::Cheatsheet;
+        self.rebuild_content();
+    }
+
     /// The label for the first menu item, which adapts to the learner's progress.
     fn continue_label(&self) -> String {
         if self.finished {
@@ -353,6 +367,7 @@ impl App<'_> {
         match self.menu_sel {
             MENU_CONTINUE => self.go_lesson(), // resumes current exercise (or the finished screen)
             MENU_LIST => self.open_list(),
+            MENU_CHEATSHEET => self.open_cheatsheet(),
             MENU_ABOUT => self.open_about(),
             MENU_QUIT => self.quit = true,
             _ => {}
@@ -526,10 +541,14 @@ impl App<'_> {
                     self.menu_select();
                 }
                 KeyCode::Char('3') => {
-                    self.menu_sel = MENU_ABOUT;
+                    self.menu_sel = MENU_CHEATSHEET;
                     self.menu_select();
                 }
                 KeyCode::Char('4') => {
+                    self.menu_sel = MENU_ABOUT;
+                    self.menu_select();
+                }
+                KeyCode::Char('5') => {
                     self.menu_sel = MENU_QUIT;
                     self.menu_select();
                 }
@@ -537,6 +556,16 @@ impl App<'_> {
             },
             View::About => match key.code {
                 KeyCode::Char('p') | KeyCode::Esc => self.go_menu(),
+                KeyCode::Char('l') => self.open_list(),
+                KeyCode::Char('c') => self.open_cheatsheet(),
+                KeyCode::Up | KeyCode::Char('k') => self.scroll(-1),
+                KeyCode::Down | KeyCode::Char('j') => self.scroll(1),
+                KeyCode::PageUp => self.scroll_page(-1),
+                KeyCode::PageDown | KeyCode::Char(' ') => self.scroll_page(1),
+                _ => {}
+            },
+            View::Cheatsheet => match key.code {
+                KeyCode::Char('p') | KeyCode::Esc => self.back_from_overlay(),
                 KeyCode::Char('l') => self.open_list(),
                 KeyCode::Up | KeyCode::Char('k') => self.scroll(-1),
                 KeyCode::Down | KeyCode::Char('j') => self.scroll(1),
@@ -548,6 +577,7 @@ impl App<'_> {
                 KeyCode::Char('n') if !self.finished => self.enter_watch(),
                 KeyCode::Char('l') => self.open_list(),
                 KeyCode::Char('h') if !self.finished => self.open_hint(),
+                KeyCode::Char('c') => self.open_cheatsheet(),
                 KeyCode::Esc => self.go_menu(),
                 KeyCode::Up | KeyCode::Char('k') => self.scroll(-1),
                 KeyCode::Down | KeyCode::Char('j') => self.scroll(1),
@@ -561,6 +591,7 @@ impl App<'_> {
                 KeyCode::Char('n') if self.passed() => self.advance(),
                 KeyCode::Char('l') => self.open_list(),
                 KeyCode::Char('h') => self.open_hint(),
+                KeyCode::Char('c') => self.open_cheatsheet(),
                 KeyCode::Char('r') => self.reset_exercise(),
                 KeyCode::Up | KeyCode::Char('k') => self.scroll(-1),
                 KeyCode::Down | KeyCode::Char('j') => self.scroll(1),
@@ -602,6 +633,7 @@ impl App<'_> {
         let title = match self.view {
             View::Menu => " OSlings — learn operating systems by building a kernel".to_string(),
             View::About => " OSlings · about".to_string(),
+            View::Cheatsheet => " OSlings · cheatsheet".to_string(),
             View::List => " OSlings · exercises".to_string(),
             View::Lesson if self.finished => " OSlings · complete".to_string(),
             View::Lesson => format!(" OSlings · {} · lesson", self.ex_name()),
@@ -659,15 +691,18 @@ impl App<'_> {
 
     fn footer_keys(&self) -> String {
         match self.view {
-            View::Menu => " ↑↓ move    ⏎ select    1-4 jump    q quit".into(),
-            View::About => " ↑↓ scroll    m menu    q quit".into(),
-            View::Lesson if self.finished => " l list    m menu    q quit".into(),
-            View::Lesson => " n run ▸    l list    h hint    m menu    ↑↓ scroll    q quit".into(),
+            View::Menu => " ↑↓ move    ⏎ select    1-5 jump    q quit".into(),
+            View::About => " ↑↓ scroll    c cheatsheet    m menu    q quit".into(),
+            View::Cheatsheet => " ↑↓ scroll    PgUp/PgDn page    l list    m menu    q quit".into(),
+            View::Lesson if self.finished => " l list    c cheatsheet    m menu    q quit".into(),
+            View::Lesson => {
+                " n run ▸    l list    h hint    c cheatsheet    m menu    ↑↓ scroll    q quit".into()
+            }
             View::Watch if self.passed() => {
-                " n next ▸    p lesson    l list    r reset    m menu    q quit".into()
+                " n next ▸    p lesson    l list    c cheatsheet    r reset    m menu    q quit".into()
             }
             View::Watch => {
-                " p lesson    h hint    l list    r reset    m menu    ↑↓ scroll    q quit".into()
+                " p lesson    h hint    c cheatsheet    l list    r reset    m menu    q quit".into()
             }
             View::Hint => " h more    p back    l list    m menu    ↑↓ scroll    q quit".into(),
             View::List => " ↑↓ move    ⏎ open    p back    m menu    q quit".into(),
@@ -843,7 +878,13 @@ impl App<'_> {
 
         // ---- selectable menu items (numbers match the 1–4 shortcuts) ----
         let cont = self.continue_label();
-        let items = [cont.as_str(), "Exercise list", "How OSlings works", "Quit"];
+        let items = [
+            cont.as_str(),
+            "Exercise list",
+            "Cheatsheet",
+            "How OSlings works",
+            "Quit",
+        ];
         for (i, item) in items.iter().enumerate() {
             if row > max_row {
                 break;
@@ -976,6 +1017,7 @@ fn about_md() -> String {
      - **n** begin / next  ·  **p** back to the lesson\n\
      - **l** exercise list (jump to any exercise you've reached)\n\
      - **h** reveal a hint (press again for the next one)\n\
+     - **c** the cheatsheet — every bit layout and magic number in one page\n\
      - **r** reset the current exercise's starter code\n\
      - **m** back to the menu  ·  **q** quit\n\n\
      ## Your work lives in `rv6/src`\n\n\

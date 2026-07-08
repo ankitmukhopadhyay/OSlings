@@ -1,6 +1,7 @@
 //! OSlings — a Rustlings-style CLI that teaches operating-system concepts by
 //! having you build the `rv6` kernel exercise by exercise.
 
+mod cheatsheet;
 mod model;
 mod render;
 mod runner;
@@ -48,6 +49,8 @@ enum Command {
     List,
     /// Display an exercise's lesson (its README) in the terminal.
     Lesson { exercise: Option<String> },
+    /// Show the cheatsheet: bit layouts, magic numbers, and concepts.
+    Cheatsheet,
     /// Restore an exercise's starter code, discarding your edits.
     Reset { exercise: Option<String> },
     /// Show an exercise's reference solution (unlocks once you've passed it).
@@ -83,6 +86,10 @@ fn real_main() -> Result<()> {
         }
         Command::List => cmd_list(&project),
         Command::Lesson { exercise } => cmd_lesson(&project, exercise),
+        Command::Cheatsheet => {
+            render::markdown(cheatsheet::markdown());
+            Ok(())
+        }
         Command::Reset { exercise } => cmd_reset(&project, exercise),
         Command::Solution { exercise } => cmd_solution(&project, exercise),
         Command::Goto { exercise } => cmd_goto(&project, exercise),
