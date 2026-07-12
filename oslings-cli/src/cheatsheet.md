@@ -307,7 +307,7 @@ for deterministic tests.
 
 ---
 
-## 11 · System calls (ex18–19)
+## 11 · System calls & file descriptors (ex18–20)
 
 A syscall is a function call across the privilege wall, via `ecall`.
 
@@ -322,16 +322,48 @@ xv6 numbers (rv6 grows into these):
 | # | Call | Status |
 |---|---|---|
 | 2 | exit(status) | ex18 |
+| 5 | read(fd, buf, len) | ex20 |
 | 11 | getpid() | ex18 |
-| 16 | write(fd, buf, len) | ex18 |
-| 1 | fork() | ex20 (planned) |
-| 3 | wait() | ex20 (planned) |
-| 5 | read(fd, buf, len) | ex20 (planned) |
-| 15 | open(path, flags) | ex20 (planned) |
+| 15 | open(path, flags) | ex20 |
+| 16 | write(fd, buf, len) | ex18, fd-aware ex20 |
+| 21 | close(fd) | ex20 |
+| 1 | fork() | ex21 (planned) |
+| 3 | wait() | ex21 (planned) |
 
 A user pointer (like `write`'s `buf`) is a **user** virtual address — the kernel
 must translate it page by page with `copyin` / `copyout`, never dereference it
-directly.
+directly. A string pointer (like `open`'s `path`) uses `copyinstr`, which stops
+at the NUL terminator.
+
+**File descriptors** (ex20): a fd is a small integer naming an open file — an
+index into the per-process `ofile` table (`Proc`, size `NOFILE = 16`). Every
+process starts with three open on the console:
+
+| fd | name | is |
+|---|---|---|
+| 0 | stdin | console |
+| 1 | stdout | console |
+| 2 | stderr | console |
+
+An open file is a `File` (file.rs): `{ kind, inum, off, readable, writable }`.
+`kind` is `None` (free slot) / `Console` / `Inode`. The key stateful field is
+**`off`**, the read/write cursor: each `read`/`write` starts at `off` and
+advances it by the byte count, so successive reads walk through the file and a
+read of 0 means end-of-file. `read`/`write` branch on `kind` but present one
+interface — the "everything is a file" idea.
+
+**open(path, flags) flags** (file.rs, xv6 values — combine with `|`):
+
+| Flag | Value | Meaning |
+|---|---|---|
+| O_RDONLY | 0x000 | read only (the default) |
+| O_WRONLY | 0x001 | write only |
+| O_RDWR | 0x002 | read and write |
+| O_CREATE | 0x200 | create the file if missing |
+| O_TRUNC | 0x400 | empty the file on open |
+
+Access mode from flags: `writable = flags & O_WRONLY != 0 || flags & O_RDWR != 0`;
+`readable = flags & O_WRONLY == 0`.
 
 ---
 
@@ -376,14 +408,15 @@ pointers to them (null-terminated) below; `sp`/`a1` point at the array,
 | `Pte` | vm.rs | one page-table entry (§3) |
 | `Context` | swtch.rs | 14 callee-saved regs for `swtch` (ra, sp, s0–s11) |
 | `Trapframe` | usermode.rs | all 31 user regs + kernel notes, offsets 0..280 |
-| `Proc` | proc.rs | a process: state, pid, pagetable, context, trapframe, kstack |
+| `Proc` | proc.rs | a process: state, pid, pagetable, context, trapframe, kstack, ofile |
 | `Inode` | fs.rs | one file/dir: kind, size, data, entries |
+| `File` | file.rs | an open file: kind, inum, off, readable, writable (ex20) |
 
 **ProcState:** Unused → Runnable → Running → Sleeping / Zombie.
 
 ---
 
-## 15 · In-memory filesystem (ex10, ex16–17)
+## 15 · In-memory filesystem (ex10, ex16–17, ex20)
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -396,8 +429,10 @@ pointers to them (null-terminated) below; `sp`/`a1` point at the array,
 - **inode**: the record for one file or directory (kind, size, bytes).
 - **inum**: the integer that names an inode; `dirlookup` turns a name into one.
 - **directory entry**: a (name → inum) pair stored inside a directory.
-- Methods: `dirlookup`, `dircreate`, `read`, `write`, `unlink`, `is_dir`,
-  `dir_is_empty`, `for_each_entry`.
+- Whole-file methods: `dirlookup`, `dircreate`, `read`, `write`, `unlink`,
+  `is_dir`, `dir_is_empty`, `for_each_entry`.
+- Offset-based methods the fd layer uses (ex20): `read_at(inum, off, buf)`,
+  `write_at(inum, off, data)` (grows the file), `truncate(inum)`, `size(inum)`.
 
 ---
 
@@ -457,5 +492,6 @@ Concepts introduced, and where:
 | 17 | file_commands | touch/cat/rm/echo/rmdir |
 | 18 | user_mode | first U-mode program + syscalls |
 | 19 | exec | load any program + argv |
+| 20 | file_descriptors | open/read/write/close over the FS |
 
 _Scroll with ↑↓ / PgUp / PgDn. Press m for the menu._
