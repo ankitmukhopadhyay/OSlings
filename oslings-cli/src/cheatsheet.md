@@ -307,7 +307,7 @@ for deterministic tests.
 
 ---
 
-## 11 · System calls & file descriptors (ex18–20)
+## 11 · System calls, file descriptors & processes (ex18–21)
 
 A syscall is a function call across the privilege wall, via `ecall`.
 
@@ -321,14 +321,14 @@ xv6 numbers (rv6 grows into these):
 
 | # | Call | Status |
 |---|---|---|
+| 1 | fork() → child pid / 0 | ex21 |
 | 2 | exit(status) | ex18 |
+| 3 | wait(&status) → pid | ex21 |
 | 5 | read(fd, buf, len) | ex20 |
 | 11 | getpid() | ex18 |
 | 15 | open(path, flags) | ex20 |
 | 16 | write(fd, buf, len) | ex18, fd-aware ex20 |
 | 21 | close(fd) | ex20 |
-| 1 | fork() | ex21 (planned) |
-| 3 | wait() | ex21 (planned) |
 
 A user pointer (like `write`'s `buf`) is a **user** virtual address — the kernel
 must translate it page by page with `copyin` / `copyout`, never dereference it
@@ -364,6 +364,26 @@ interface — the "everything is a file" idea.
 
 Access mode from flags: `writable = flags & O_WRONLY != 0 || flags & O_RDWR != 0`;
 `readable = flags & O_WRONLY == 0`.
+
+**Processes: fork / exit / wait** (ex21). These three build a process *tree*:
+
+- **fork()** duplicates the caller into a **child** and returns twice: the
+  child's pid in the parent, `0` in the child. Duplicating = copy the memory
+  (`vm::uvmcopy`), copy the trapframe (the registers, so the child resumes at
+  the same instruction), copy the `ofile` table, then set the child's saved
+  `a0 = 0` (that one asymmetry is why fork returns two values).
+- **exit(status)** stops the process and leaves it a **Zombie**: not running,
+  but its slot lingers holding `xstate` (the status) so a parent can read it.
+- **wait(&status)** finds a Zombie child, writes its status out, frees its slot
+  (**reaps** it), and returns its pid; it **blocks** (yields) if a child exists
+  but hasn't exited. Returns −1 if the caller has no children.
+
+`Proc` gains `parent` (who forked it) and `xstate` (its exit status). The
+**scheduler** (usermode.rs) loops: pick a `Runnable` proc with `RoundRobin`
+(your ex06 policy!), `swtch` in (your ex05 swtch), regain control when it yields
+(`proc_yield`) or exits (`exit_current`), repeat until the root finished. rv6's
+scheduler is **cooperative** — a process runs until it *chooses* to give up the
+CPU (by exiting or blocking in wait); nothing preempts it.
 
 ---
 
@@ -408,11 +428,13 @@ pointers to them (null-terminated) below; `sp`/`a1` point at the array,
 | `Pte` | vm.rs | one page-table entry (§3) |
 | `Context` | swtch.rs | 14 callee-saved regs for `swtch` (ra, sp, s0–s11) |
 | `Trapframe` | usermode.rs | all 31 user regs + kernel notes, offsets 0..280 |
-| `Proc` | proc.rs | a process: state, pid, pagetable, context, trapframe, kstack, ofile |
+| `Proc` | proc.rs | a process: state, pid, pagetable, context, trapframe, kstack, ofile, parent, xstate |
 | `Inode` | fs.rs | one file/dir: kind, size, data, entries |
 | `File` | file.rs | an open file: kind, inum, off, readable, writable (ex20) |
 
-**ProcState:** Unused → Runnable → Running → Sleeping / Zombie.
+**ProcState:** Unused → Runnable → Running → Sleeping / Zombie. A **Zombie**
+(ex21) has exited but not yet been `wait`-ed for; it holds its `xstate` until a
+parent reaps it.
 
 ---
 
@@ -493,5 +515,6 @@ Concepts introduced, and where:
 | 18 | user_mode | first U-mode program + syscalls |
 | 19 | exec | load any program + argv |
 | 20 | file_descriptors | open/read/write/close over the FS |
+| 21 | fork_wait | fork/exit/wait + a multi-process scheduler |
 
 _Scroll with ↑↓ / PgUp / PgDn. Press m for the menu._
