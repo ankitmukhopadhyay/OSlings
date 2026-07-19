@@ -193,3 +193,12 @@ mode = "qemu"
 part = 2
 features = ["harness"]
 files = ["main.rs", "entry.rs", "start.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "semaphore.rs", "kheap.rs", "fs.rs", "trap.rs", "plic.rs", "console.rs", "shell.rs", "usermode.rs", "syscall.rs", "exec.rs", "file.rs"]
+
+# --- 22 ---------------------------------------------------------------------
+[[exercises]]
+name = "22_userland"
+path = "exercises/22_userland"
+mode = "qemu"
+part = 2
+features = ["harness"]
+files = ["main.rs", "entry.rs", "start.rs", "uart.rs", "testdev.rs", "memlayout.rs", "kalloc.rs", "vm.rs", "param.rs", "proc.rs", "swtch.rs", "sched.rs", "spinlock.rs", "semaphore.rs", "kheap.rs", "fs.rs", "trap.rs", "plic.rs", "console.rs", "shell.rs", "usermode.rs", "syscall.rs", "exec.rs", "file.rs"]

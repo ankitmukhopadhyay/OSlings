@@ -307,7 +307,7 @@ for deterministic tests.
 
 ---
 
-## 11 · System calls, file descriptors & processes (ex18–21)
+## 11 · System calls, file descriptors & processes (ex18–22)
 
 A syscall is a function call across the privilege wall, via `ecall`.
 
@@ -325,6 +325,7 @@ xv6 numbers (rv6 grows into these):
 | 2 | exit(status) | ex18 |
 | 3 | wait(&status) → pid | ex21 |
 | 5 | read(fd, buf, len) | ex20 |
+| 7 | exec(path, argv) → argc | ex22 |
 | 11 | getpid() | ex18 |
 | 15 | open(path, flags) | ex20 |
 | 16 | write(fd, buf, len) | ex18, fd-aware ex20 |
@@ -384,6 +385,27 @@ Access mode from flags: `writable = flags & O_WRONLY != 0 || flags & O_RDWR != 0
 (`proc_yield`) or exits (`exit_current`), repeat until the root finished. rv6's
 scheduler is **cooperative** — a process runs until it *chooses* to give up the
 CPU (by exiting or blocking in wait); nothing preempts it.
+
+**exec(path, argv)** (ex22) completes the trio: it **replaces** the calling
+process's whole address space with a different program. Mechanism (`exec_into`):
+build a new page table (`load_segment` + `map_user_stack` + `push_argv`), swap it
+in for the old one, repoint the trapframe (`epc = USER_CODE`, `sp`, `a0 = argc`,
+`a1 = argv`), then `free_user_pagetable` the old one. Key facts:
+
+- **On success it does not return** — the caller's code was just freed; the
+  process resumes as the new program at its entry. Only a *failed* exec returns
+  (−1), so the caller can react.
+- **Open files survive** — `exec` leaves `ofile` alone (that is how a redirected
+  `stdout` persists across exec).
+- Freeing the old user memory mid-syscall is safe because a syscall runs on the
+  **kernel** page table, not the user one.
+
+`fork` + `exec` + `wait` is how *every* Unix command runs: fork a child, exec the
+command in it, wait for it. With exec a system call, the **shell itself is a user
+program** (`sh` in exec.rs): a `$ ` prompt that reads a line, forks, execs, and
+waits — no kernel privileges, only syscalls. A blocking console `read` turns
+interrupts back on (in `sys_read`) so a keypress can wake it; the kernel stack is
+one 4 KiB page, so large scratch (the exec argv buffer) lives in a `static`.
 
 ---
 
@@ -516,5 +538,6 @@ Concepts introduced, and where:
 | 19 | exec | load any program + argv |
 | 20 | file_descriptors | open/read/write/close over the FS |
 | 21 | fork_wait | fork/exit/wait + a multi-process scheduler |
+| 22 | userland | exec syscall; a shell running in user mode |
 
 _Scroll with ↑↓ / PgUp / PgDn. Press m for the menu._
