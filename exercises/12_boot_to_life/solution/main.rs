@@ -57,7 +57,7 @@ const BANNER: &str = r#"
 | |      \ V /   | (_) |
 |_|       \_/     \___/
 
-  A tiny RISC-V OS
+  A tiny interesting RISC-V OS
 "#;
 
 /// Bring the kernel's core subsystems up, in order. After this returns, the

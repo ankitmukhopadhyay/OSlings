@@ -74,7 +74,7 @@ const BANNER: &str = r#"
 | |      \ V /   | (_) |
 |_|       \_/     \___/
 
-  A tiny RISC-V OS
+  A tiny interesting RISC-V OS
 "#;
 
 unsafe fn kinit() {
