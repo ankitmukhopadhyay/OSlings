@@ -1,0 +1,49 @@
+name: Grade OSlings submissions
+
+# Runs when a student pushes a new/updated snapshot. Path-filtered so it stays
+# inert on the instructor repo (which has no `submissions/`).
+on:
+  push:
+    paths:
+      - 'submissions/**'
+  pull_request:
+    paths:
+      - 'submissions/**'
+  workflow_dispatch: {}
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install QEMU (riscv64)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-misc
+          qemu-system-riscv64 --version
+
+      - name: Install Rust nightly + RISC-V target
+        run: |
+          rustup toolchain install nightly --profile minimal
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup component add rust-src llvm-tools --toolchain nightly
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            oslings-cli/target
+          key: ${{ runner.os }}-oslings-${{ hashFiles('oslings-cli/Cargo.lock') }}
+
+      - name: Build the oslings CLI
+        run: cargo build --release --manifest-path oslings-cli/Cargo.toml
+
+      # Re-runs the real kernel harness against each committed submission, so the
+      # grade reflects code that genuinely builds and boots — it cannot be faked
+      # by editing local state. Prints one line per exercise plus a total.
+      - name: Grade all submissions
+        run: ./oslings-cli/target/release/oslings grade

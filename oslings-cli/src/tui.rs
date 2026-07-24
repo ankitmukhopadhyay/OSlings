@@ -266,21 +266,30 @@ impl App<'_> {
         if hints.is_empty() {
             return "# Hints\n\n_No hints for this exercise._".into();
         }
+        let difficulty = self.project.effective_difficulty();
+        let cap = difficulty.hint_cap(hints.len());
         let revealed = self
             .state
             .hints
             .get(&ex.name)
             .copied()
             .unwrap_or(0)
-            .min(hints.len());
+            .min(cap);
         let mut s = format!("# Hints — {}\n\n", ex.name);
         for (i, h) in hints.iter().enumerate().take(revealed) {
             s.push_str(&format!("## Hint {}\n\n{}\n\n", i + 1, h));
         }
-        if revealed < hints.len() {
+        if revealed < cap {
             s.push_str(&format!(
                 "_Press **h** to reveal hint {} of {}._",
                 revealed + 1,
+                cap
+            ));
+        } else if cap < hints.len() {
+            s.push_str(&format!(
+                "_That's every hint available at `{}` difficulty ({} of {})._",
+                difficulty.as_str(),
+                cap,
                 hints.len()
             ));
         } else {
@@ -399,7 +408,8 @@ impl App<'_> {
 
     fn reveal_next_hint(&mut self) {
         let ex = &self.project.info.exercises[self.ex_index];
-        let max = model::parse_hints(self.project, ex).len();
+        let total = model::parse_hints(self.project, ex).len();
+        let max = self.project.effective_difficulty().hint_cap(total);
         let name = ex.name.clone();
         let n = self.state.hints.entry(name).or_insert(0);
         if *n < max {
@@ -480,8 +490,8 @@ impl App<'_> {
     fn on_result(&mut self, o: Outcome) {
         self.running = false;
         if o.passed {
-            let name = self.ex_name().to_string();
-            self.state.mark_completed(&name);
+            let ex = self.project.info.exercises[self.ex_index].clone();
+            let _ = model::record_pass(self.project, &mut self.state, &ex);
             let _ = self.state.save(self.project);
         }
         self.outcome = Some(o);

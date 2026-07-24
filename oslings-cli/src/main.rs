@@ -10,7 +10,7 @@ mod watch;
 
 use anyhow::{anyhow, Context, Result};
 use clap::{Parser, Subcommand};
-use model::{Exercise, Project, State};
+use model::{Difficulty, Exercise, Project, State};
 use std::fs;
 
 #[derive(Parser)]
@@ -44,7 +44,11 @@ enum Command {
         reset: bool,
     },
     /// Show how many exercises you've completed.
-    Progress,
+    Progress {
+        /// Emit a gradebook-ready CSV report instead of the pretty view.
+        #[arg(long)]
+        export: bool,
+    },
     /// List all exercises in order.
     List,
     /// Display an exercise's lesson (its README) in the terminal.
@@ -57,6 +61,16 @@ enum Command {
     Solution { exercise: Option<String> },
     /// Jump the "current" pointer to a specific exercise (or the next one).
     Goto { exercise: Option<String> },
+    /// Show or set the guidance level: guided | standard | challenge.
+    Difficulty {
+        /// New level to set locally; omit to just show the current one.
+        level: Option<String>,
+    },
+    /// Re-grade committed submissions by re-running the harness (for CI).
+    Grade {
+        /// One exercise (exits non-zero on failure, for a CI check), or all.
+        exercise: Option<String>,
+    },
 }
 
 fn main() {
@@ -79,10 +93,14 @@ fn real_main() -> Result<()> {
         Command::Watch => watch::watch(&project),
         Command::Run { exercise } => cmd_run(&project, exercise),
         Command::Hint { exercise, all, reset } => cmd_hint(&project, exercise, all, reset),
-        Command::Progress => {
+        Command::Progress { export } => {
             let state = State::load(&project)?;
-            render::progress(&project, &state);
-            Ok(())
+            if export {
+                cmd_progress_export(&project, &state)
+            } else {
+                render::progress(&project, &state);
+                Ok(())
+            }
         }
         Command::List => cmd_list(&project),
         Command::Lesson { exercise } => cmd_lesson(&project, exercise),
@@ -93,6 +111,141 @@ fn real_main() -> Result<()> {
         Command::Reset { exercise } => cmd_reset(&project, exercise),
         Command::Solution { exercise } => cmd_solution(&project, exercise),
         Command::Goto { exercise } => cmd_goto(&project, exercise),
+        Command::Difficulty { level } => cmd_difficulty(&project, level),
+        Command::Grade { exercise } => cmd_grade(&project, exercise),
+    }
+}
+
+/// Re-verify committed submissions by re-running the real harness against them.
+/// This is what CI calls; the grade cannot be faked by editing state, because it
+/// rebuilds and reboots the student's snapshotted code from scratch.
+///
+/// With an exercise argument it grades just that one and exits non-zero on
+/// failure (a single CI check); with no argument it grades every submission and
+/// prints an aggregate report.
+fn cmd_grade(project: &Project, arg: Option<String>) -> Result<()> {
+    let single = arg.is_some();
+    let targets: Vec<Exercise> = match &arg {
+        Some(q) => vec![project
+            .find(q)
+            .ok_or_else(|| anyhow!("no exercise matching `{q}`"))?
+            .clone()],
+        None => project.info.exercises.clone(),
+    };
+
+    let mut graded = 0usize;
+    let mut passed = 0usize;
+    for ex in &targets {
+        let subdir = project.submissions_dir().join(&ex.name);
+        if !subdir.exists() {
+            if single {
+                return Err(anyhow!(
+                    "no submission for {}: submissions/{}/ is missing",
+                    ex.name,
+                    ex.name
+                ));
+            }
+            println!("  [ -- ] {:<26} no submission", ex.name);
+            continue;
+        }
+        graded += 1;
+        model::stage_from_dir(project, ex, &subdir)?;
+        let outcome = runner::run(project, ex)?;
+        if outcome.passed {
+            passed += 1;
+            println!("  [ OK ] {}", ex.name);
+        } else {
+            println!("  [FAIL] {:<26} {}", ex.name, outcome.summary);
+        }
+    }
+
+    println!();
+    render::info(&format!("Graded {graded} submission(s): {passed} passed."));
+    // For a single-exercise CI check, signal failure through the exit code.
+    if single && passed != graded {
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+/// Emit a gradebook-ready CSV of the learner's progress: one row per exercise,
+/// with completion, difficulty, hints used, and pass time (from the committed
+/// snapshot metadata when present). Prints to stdout; redirect to a file to
+/// submit (`oslings progress --export > progress.csv`).
+fn cmd_progress_export(project: &Project, state: &State) -> Result<()> {
+    let (name, email) = project
+        .config
+        .student
+        .as_ref()
+        .map(|s| (s.name.clone(), s.email.clone()))
+        .unwrap_or_default();
+
+    let mut out = String::new();
+    out.push_str("student_name,student_email,exercise,part,completed,difficulty,hints_used,passed_at\n");
+    for ex in &project.info.exercises {
+        let completed = state.is_completed(&ex.name);
+        let hints = state.hints.get(&ex.name).copied().unwrap_or(0);
+        let meta = model::read_submission_meta(project, &ex.name);
+        let difficulty = meta
+            .as_ref()
+            .map(|m| m.difficulty.clone())
+            .unwrap_or_else(|| project.effective_difficulty().as_str().to_string());
+        let passed_at = meta.map(|m| m.passed_at).unwrap_or_default();
+        out.push_str(&format!(
+            "{},{},{},{},{},{},{},{}\n",
+            csv(&name),
+            csv(&email),
+            csv(&ex.name),
+            ex.part,
+            if completed { "yes" } else { "no" },
+            csv(&difficulty),
+            hints,
+            csv(&passed_at),
+        ));
+    }
+    print!("{out}");
+    Ok(())
+}
+
+/// Quote a CSV field if it contains a comma, quote, or newline (RFC 4180).
+fn csv(field: &str) -> String {
+    if field.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", field.replace('"', "\"\""))
+    } else {
+        field.to_string()
+    }
+}
+
+fn cmd_difficulty(project: &Project, level: Option<String>) -> Result<()> {
+    match level {
+        None => {
+            let d = project.effective_difficulty();
+            render::info(&format!("Difficulty: {}", d.as_str()));
+            render::note(
+                "Levels: guided (full guidance), standard (task lines + 2 hints), \
+                 challenge (minimal + 1 hint).\nSet with `oslings difficulty <level>`.",
+            );
+            Ok(())
+        }
+        Some(s) => {
+            let d = Difficulty::parse(&s).ok_or_else(|| {
+                anyhow!("unknown difficulty `{s}` (expected: guided, standard, or challenge)")
+            })?;
+            let mut cfg = project.config.clone();
+            cfg.difficulty = Some(d);
+            cfg.save(&project.root)?;
+            render::info(&format!(
+                "Difficulty set to {} (saved in .oslings/config.toml).",
+                d.as_str()
+            ));
+            if d != Difficulty::Guided {
+                render::note(
+                    "Applies to each exercise as it is staged. To re-stage the CURRENT \
+                     exercise at this level, run `oslings reset` (this discards your edits).",
+                );
+            }
+            Ok(())
+        }
     }
 }
 
@@ -128,7 +281,7 @@ fn cmd_run(project: &Project, arg: Option<String>) -> Result<()> {
     if outcome.passed {
         render::pass_banner(&ex.name);
         render::note(&outcome.summary);
-        state.mark_completed(&ex.name);
+        model::record_pass(project, &mut state, &ex)?;
         // If we just passed the current exercise, advance the pointer.
         if state.current.as_deref() == Some(ex.name.as_str()) {
             let next = project
@@ -165,6 +318,10 @@ fn cmd_hint(project: &Project, arg: Option<String>, all: bool, reset: bool) -> R
         return Ok(());
     }
 
+    // Difficulty caps how many hints may be revealed.
+    let difficulty = project.effective_difficulty();
+    let cap = difficulty.hint_cap(hints.len());
+
     if reset {
         state.hints.insert(ex.name.clone(), 0);
         state.save(project)?;
@@ -172,32 +329,57 @@ fn cmd_hint(project: &Project, arg: Option<String>, all: bool, reset: bool) -> R
         return Ok(());
     }
 
+    if cap == 0 {
+        render::note(&format!(
+            "Hints are turned off at `{}` difficulty — re-read the lesson: `oslings lesson`.",
+            difficulty.as_str()
+        ));
+        return Ok(());
+    }
+
     if all {
-        for (i, h) in hints.iter().enumerate() {
+        for (i, h) in hints.iter().take(cap).enumerate() {
             render::info(&format!("── Hint {} ──", i + 1));
             render::markdown(h);
+        }
+        if cap < hints.len() {
+            render::note(&format!(
+                "Showing {} of {} hints — the rest are held back at `{}` difficulty.",
+                cap,
+                hints.len(),
+                difficulty.as_str()
+            ));
         }
         return Ok(());
     }
 
     let revealed = state.hints.get(&ex.name).copied().unwrap_or(0);
-    if revealed >= hints.len() {
-        render::note(&format!(
-            "All {} hints already shown. Use `oslings hint --all` to re-read, \
-             or `--reset` to start over.",
-            hints.len()
-        ));
+    if revealed >= cap {
+        if cap < hints.len() {
+            render::note(&format!(
+                "That's all the hints available at `{}` difficulty ({} of {}).",
+                difficulty.as_str(),
+                cap,
+                hints.len()
+            ));
+        } else {
+            render::note(&format!(
+                "All {} hints already shown. Use `oslings hint --all` to re-read, \
+                 or `--reset` to start over.",
+                hints.len()
+            ));
+        }
         return Ok(());
     }
 
     let level = revealed; // show the next unseen hint
-    render::info(&format!("── Hint {} of {} ──", level + 1, hints.len()));
+    render::info(&format!("── Hint {} of {} ──", level + 1, cap));
     render::markdown(&hints[level]);
 
     state.hints.insert(ex.name.clone(), level + 1);
     state.save(project)?;
 
-    let left = hints.len() - (level + 1);
+    let left = cap - (level + 1);
     if left > 0 {
         render::note(&format!("{left} more hint(s) available — run `oslings hint` again."));
     }
@@ -299,3 +481,16 @@ fn cmd_goto(project: &Project, arg: Option<String>) -> Result<()> {
     Ok(())
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::csv;
+
+    #[test]
+    fn csv_quotes_only_when_needed() {
+        assert_eq!(csv("plain"), "plain");
+        assert_eq!(csv("a,b"), "\"a,b\"");
+        assert_eq!(csv("she said \"hi\""), "\"she said \"\"hi\"\"\"");
+        assert_eq!(csv("line\nbreak"), "\"line\nbreak\"");
+    }
+}

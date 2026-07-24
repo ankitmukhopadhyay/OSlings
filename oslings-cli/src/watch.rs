@@ -55,7 +55,7 @@ fn run_current(project: &Project, state: &mut State) -> Result<()> {
     let outcome = runner::run(project, &ex)?;
     if outcome.passed {
         render::pass_banner(&ex.name);
-        state.mark_completed(&ex.name);
+        crate::model::record_pass(project, state, &ex)?;
         // Advance to the next not-yet-completed exercise.
         let next = project
             .index_of(&ex.name)
